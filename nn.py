@@ -5,23 +5,20 @@ Notice that the weights and biases are
 generated randomly.
 
 No need to change anything, but feel free to tweak
-to test your network!
+to test your network, play around with the epochs, batch size, etc!
 """
 
 import numpy as np
 from sklearn.datasets import load_boston
-from sklearn.utils import shuffle
+from sklearn.utils import shuffle, resample
 from miniflow import *
 
-X, y = Input(), Input()
-W1, b1 = Input(), Input()
-W2, b2 = Input(), Input()
-
-# load data
+# Load data
 data = load_boston()
 X_ = data['data']
 y_ = data['target']
-# normalize data
+
+# Normalize data
 X_ = (X_ - np.mean(X_, axis=0)) / np.std(X_, axis=0)
 
 n_features = X_.shape[1]
@@ -31,7 +28,11 @@ b1_ = np.zeros(n_hidden)
 W2_ = np.random.randn(n_hidden, 1)
 b2_ = np.zeros(1)
 
-# neural network
+# Neural network
+X, y = Input(), Input()
+W1, b1 = Input(), Input()
+W2, b2 = Input(), Input()
+
 l1 = Linear(X, W1, b1)
 s1 = Sigmoid(l1)
 l2 = Linear(s1, W2, b2)
@@ -46,27 +47,36 @@ feed_dict = {
     b2: b2_
 }
 
-# Feel free to experiment with the epochs and learning rate
-epochs = 1000
-m = X_.shape[0] # total number of examples
+epochs = 100
+# Total number of examples
+m = X_.shape[0]
+batch_size = 11
+steps_per_epoch = m // batch_size
 
 graph = topological_sort(feed_dict)
 trainables = [W1, b1, W2, b2]
 
-# step 4
+print("Total number of examples = {}".format(m))
+
+# Step 4
 for i in range(epochs):
-    # step 1
-    # on each epoch we shuffle the entire dataset
-    X_, y_ = shuffle(X_, y_)
-    # reset value of Input
-    X.value = X_
-    y.value = y_
+    loss = 0
+    for j in range(steps_per_epoch):
+        # Step 1
+        # Randomly sample a batch of examples
+        X_batch, y_batch = resample(X_, y_, n_samples=batch_size)
 
-    # step 2
-    forward_and_backward(graph)
+        # Reset value of X and y Inputs
+        X.value = X_batch
+        y.value = y_batch
 
-    # step 3
-    sgd_update(trainables)
+        # Step 2
+        forward_and_backward(graph)
 
-    print("Epoch: {}, Loss: {:.3f}".format(i, graph[-1].value))
+        # Step 3
+        sgd_update(trainables)
+
+        loss += graph[-1].value
+
+    print("Epoch: {}, Loss: {:.3f}".format(i+1, loss/steps_per_epoch))
 
